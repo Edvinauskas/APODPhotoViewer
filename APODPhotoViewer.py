@@ -1,11 +1,9 @@
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import sys
-import urllib2, urllib
-from time import strftime
+import urllib2
 import datetime
-import re, os
-import cStringIO
+import re
 
 class GetImageThread(QThread):
     def __init__(self, days_to_go_back, parent=None):
@@ -39,9 +37,9 @@ class GetImageThread(QThread):
         self.start()
 
     def get_page_url(self):
-        today_date = datetime.date.today()
+        todays_date = datetime.date.today()
         minus_days = datetime.timedelta(days=self.days_to_go_back)
-        image_date = today_date + minus_days
+        image_date = todays_date + minus_days
         page_url = "http://apod.nasa.gov/apod/ap%s.html" % image_date.strftime("%y%m%d")
         return page_url
 
@@ -56,7 +54,7 @@ class GetImageThread(QThread):
         return image_url, image_name
 
     def get_image_from_url(self, image_url):
-        image_data = urllib.urlopen(image_url).read()
+        image_data = urllib2.urlopen(image_url).read()
         return image_data
 
     def __del__(self):
@@ -69,10 +67,6 @@ class APODPhotoViewer(QWidget):
 
         self.days_to_go_back = 0
         self.too_far_forward = False
-        self.image_title_date = ""
-        self.page_url = ""
-        self.page_html = ""
-        self.image_url = ""
 
         self.GUI()
         self.connect(self.next_button, SIGNAL('clicked()'), self.load_next_image)
@@ -80,7 +74,7 @@ class APODPhotoViewer(QWidget):
         self.get_image()
 
     def GUI(self):        
-        self.picture_title = QLabel("")
+        self.picture_title = QLabel()
         self.picture_title.setStyleSheet("QLabel {font-size: 20px; font-weight: bold;}")
         self.picture_title.setFixedHeight(30)
         self.picture_title.setAlignment(Qt.AlignCenter)
@@ -92,7 +86,7 @@ class APODPhotoViewer(QWidget):
         title_picture_grid.addWidget(self.picture_title)
         title_picture_grid.addWidget(self.display_picture_label)
 
-        self.prev_button = QPushButton("Prev")
+        self.prev_button = QPushButton("Previous")
         self.prev_button.setFixedSize(100, 50)
         self.next_button = QPushButton("Next")
         self.next_button.setFixedSize(100, 50)
