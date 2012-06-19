@@ -22,7 +22,6 @@ class GetImageThread(QThread):
         image_title = QString(image_name[0])
         final_image = QImage()
         final_image.loadFromData(image_data)
-        self.sleep(1)
         self.emit(SIGNAL("finished(QString, QImage)"),
             image_title,
             final_image
@@ -45,8 +44,11 @@ class GetImageThread(QThread):
         return html
 
     def parse_for_image_link_and_title(self, html):
-        image_url = re.findall('<a href="image/(.*?)">', html)
-        image_name = re.findall('<center>\n<b>(.*?)</b> <br> \n<b> Image Credit', html)
+        image_url = re.findall('<a href="image/(.*?)"', html)
+        print image_url, " image URL"
+        # image_name = re.findall('<center>\n<b>(.*?)</b> <br>', html)
+        image_name = re.findall("<title> APOD: (.*?)\n</title>", html)
+        print html
         return image_url, image_name
 
     def get_image_from_url(self, image_url):
@@ -61,7 +63,7 @@ class APODPhotoViewer(QWidget):
     def __init__(self, win_parrent = None):
         super(APODPhotoViewer, self).__init__()
 
-        self.days_to_go_back = -1
+        self.days_to_go_back = 0
         self.too_far_forward = False
         self.image_title_date = ""
         self.page_url = ""
@@ -74,8 +76,9 @@ class APODPhotoViewer(QWidget):
         self.get_image()
 
     def GUI(self):        
-        self.picture_title = QLabel("Picture title")
-        self.picture_title.setFixedHeight(10)
+        self.picture_title = QLabel("")
+        self.picture_title.setStyleSheet("QLabel {font-size: 20px;}")
+        self.picture_title.setFixedHeight(30)
         self.picture_title.setAlignment(Qt.AlignCenter)
         self.display_picture_label = QLabel()
         self.display_picture_label.setStyleSheet("QLabel {background-color : grey;}")
@@ -105,6 +108,7 @@ class APODPhotoViewer(QWidget):
         
 
     def get_image(self):
+        self.picture_title.setText("")
         self.get_image_thread = GetImageThread(self.days_to_go_back) 
         self.set_loading_image_text()
         self.connect(self.get_image_thread, SIGNAL('finished(QString, QImage)'), self.set_image)
