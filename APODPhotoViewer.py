@@ -103,7 +103,7 @@ class APODPhotoViewer(QtGui.QWidget):
 
         self.setLayout(self.vbox)
 
-        self.setFixedSize(1200, 900)
+        # self.setFixedSize(1200, 900)
         self.setWindowTitle('Astronomy Picture of the Day Photo Viewer')
 
     def get_image(self):
@@ -159,5 +159,5 @@ class APODPhotoViewer(QtGui.QWidget):
 if __name__ == '__main__':
     APODPhotoViewerMain = QtGui.QApplication(sys.argv)
     APODPhotoViewer = APODPhotoViewer()
-    APODPhotoViewer.show()
+    APODPhotoViewer.showMaximized()
     sys.exit(APODPhotoViewerMain.exec_())
