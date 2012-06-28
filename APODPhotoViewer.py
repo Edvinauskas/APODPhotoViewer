@@ -17,21 +17,23 @@ class GetImageThread(QtCore.QThread):
         page_html = self.get_page_html(page_url)
         image_url, image_title = self.parse_for_image_link_and_title(page_html)
         image_title = image_title[0]
-        image = QtGui.QImage()
+        image_blob = QtGui.QImage()
         if not image_url or not image_title:
-            self.emit(QtCore.SIGNAL("finished(QString, QString, QImage)"),
+            self.emit(QtCore.SIGNAL("finished(QString, QString, QImage, QString)"),
                 page_url,
                 image_title,
-                image
+                image_blob,
+                image_url
                 )
         else:
             image_url = "http://apod.nasa.gov/apod/image/%s" % image_url[0]
             image_data = self.get_image_from_url(image_url)
-            image.loadFromData(image_data)
-            self.emit(QtCore.SIGNAL("finished(QString, QString, QImage)"),
+            image_blob.loadFromData(image_data)
+            self.emit(QtCore.SIGNAL("finished(QString, QString, QImage, QString)"),
                 page_url,
                 image_title,
-                image
+                image_blob,
+                image_url
                 )
 
     def start_thread(self):
@@ -62,6 +64,18 @@ class GetImageThread(QtCore.QThread):
         self.exiting = True
         self.wait()
 
+class DownloadImageThread(QtCore.QThread):
+    def __init__(self, download_link, parent=None):
+        QtCore.QThread.__init__(self, parent)
+        self.exiting = False
+        self.download_link = download_link
+
+    def run(self):
+        print "downloading"
+
+    def start_thread(self):
+        self.start()
+
 
 class APODPhotoViewer(QtGui.QWidget):
     def __init__(self, win_parrent=None):
@@ -69,10 +83,12 @@ class APODPhotoViewer(QtGui.QWidget):
 
         self.days_to_go_back = 0
         self.too_far_forward = False
+        self.download_link = QtCore.QString()
 
         self.GUI()
         self.next_button.clicked.connect(self.load_next_image)
         self.prev_button.clicked.connect(self.load_prev_image)
+        self.connect(self.download_button, QtCore.SIGNAL("clicked()"), self.download_image)
         self.get_image()
 
     def GUI(self):
@@ -92,10 +108,13 @@ class APODPhotoViewer(QtGui.QWidget):
         self.prev_button.setFixedSize(100, 50)
         self.next_button = QtGui.QPushButton("Next")
         self.next_button.setFixedSize(100, 50)
+        self.download_button = QtGui.QPushButton("Download")
+        self.download_button.setFixedSize(100, 50)
 
         bottom_container = QtGui.QGridLayout()
-        bottom_container.addWidget(self.prev_button, 1, 0)
-        bottom_container.addWidget(self.next_button, 1, 1)
+        bottom_container.addWidget(self.download_button, 1, 0)
+        bottom_container.addWidget(self.prev_button, 1, 1)
+        bottom_container.addWidget(self.next_button, 1, 2)
 
         self.vbox = QtGui.QVBoxLayout()
         self.vbox.addLayout(title_picture_grid)
@@ -109,16 +128,18 @@ class APODPhotoViewer(QtGui.QWidget):
     def get_image(self):
         self.next_button.setEnabled(False)
         self.prev_button.setEnabled(False)
+        self.download_button.setEnabled(False)
         self.picture_title.setText("")
         self.get_image_thread = GetImageThread(self.days_to_go_back)
         self.set_loading_image_text()
-        self.connect(self.get_image_thread, QtCore.SIGNAL('finished(QString, QString, QImage)'), self.set_image)
+        self.connect(self.get_image_thread, QtCore.SIGNAL('finished(QString, QString, QImage, QString)'), self.set_image)
         self.get_image_thread.start_thread()
 
     def load_next_image(self):
         if self.days_to_go_back + 1 > 0:
             self.display_picture_label.setText("No picture here :(")
             self.too_far_forward = True
+            self.picture_title.setText("")
         else:
             self.days_to_go_back += 1
             self.get_image()
@@ -127,6 +148,7 @@ class APODPhotoViewer(QtGui.QWidget):
         if self.too_far_forward is True:
             self.days_to_go_back = 0
             self.too_far_forward = False
+            self.get_image()
         else:
             self.days_to_go_back -= 1
             self.get_image()
@@ -134,7 +156,7 @@ class APODPhotoViewer(QtGui.QWidget):
     def set_loading_image_text(self):
         self.display_picture_label.setText("Loading...")
 
-    def set_image(self, page_link, title, image):
+    def set_image(self, page_link, title, image, download_link):
         image_pixmap = QtGui.QPixmap(image).scaled(
                 QtCore.QSize(self.display_picture_label.size()),
                 QtCore.Qt.KeepAspectRatio,
@@ -146,15 +168,21 @@ class APODPhotoViewer(QtGui.QWidget):
             )
             self.picture_title.setText(title)
             self.connect(self.display_picture_label, QtCore.SIGNAL("linkActivated(QString)"), self.open_URL)
+            self.download_button.setEnabled(False)
         else:
             self.display_picture_label.setPixmap(image_pixmap)
             self.picture_title.setText(title)
+            self.download_button.setEnabled(True)
 
         self.next_button.setEnabled(True)
         self.prev_button.setEnabled(True)
 
     def open_URL(self, URL):
         QtGui.QDesktopServices().openUrl(QtCore.QUrl(URL))
+
+    def download_image(self):
+        self.download_image_thread = DownloadImageThread(self.download_link)
+        self.download_image_thread.start_thread()
 
 if __name__ == '__main__':
     APODPhotoViewerMain = QtGui.QApplication(sys.argv)
